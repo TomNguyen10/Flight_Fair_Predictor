@@ -2,23 +2,48 @@ import csv
 import os
 import time
 import argparse
+import sys
 from collections import defaultdict
 from typing import Dict, List, Set
 from datetime import datetime, timedelta
 
 # Import fast-flights functions
-from fast_flights import FlightData, Passengers, get_flights
+try:
+    from fast_flights import FlightData, Passengers, get_flights
+except ImportError as e:
+    print(f"Error importing fast-flights: {e}")
+    sys.exit(1)
 
 
 def read_airports_csv(csv_path: str) -> List[str]:
     """Read airport codes from the CSV file."""
-    airport_codes = []
-    with open(csv_path, 'r', encoding='utf-8') as file:
-        reader = csv.DictReader(file)
-        for row in reader:
-            # Use the 'code' column from airports.csv
-            airport_codes.append(row['code'])
-    return airport_codes
+    try:
+        if not os.path.exists(csv_path):
+            print(f"Error: File not found: {csv_path}")
+            print(f"Current directory: {os.getcwd()}")
+            print("Directory contents:")
+            print(os.listdir('.'))
+            sys.exit(1)
+
+        airport_codes = []
+        with open(csv_path, 'r', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                # Use the 'code' column from airports.csv
+                if 'code' not in row:
+                    print(
+                        f"Error: 'code' column not found in CSV. Available columns: {list(row.keys())}")
+                    sys.exit(1)
+                airport_codes.append(row['code'])
+
+        if not airport_codes:
+            print("Error: No airport codes found in the CSV file")
+            sys.exit(1)
+
+        return airport_codes
+    except Exception as e:
+        print(f"Error reading airports CSV: {e}")
+        sys.exit(1)
 
 
 def check_direct_flights(airports: List[str], sample_size: int = None, delay: float = 1.0) -> Dict[str, List[str]]:
@@ -117,20 +142,15 @@ def save_to_csv(direct_flights_map: Dict[str, List[str]], output_path: str) -> N
             writer.writerow([source, ','.join(destinations)])
 
 
-def parse_args():
-    """Parse command-line arguments."""
+def main():
+    # Parse command-line arguments
     parser = argparse.ArgumentParser(
         description='Generate a map of direct flights between airports.')
     parser.add_argument('--sample-size', type=int,
                         help='Limit the number of airports to process (for testing)')
     parser.add_argument('--delay', type=float, default=1.0,
                         help='Delay in seconds between API calls (default: 1.0)')
-    return parser.parse_args()
-
-
-def main():
-    # Parse command-line arguments
-    args = parse_args()
+    args = parser.parse_args()
 
     # Paths
     data_dir = 'data'
@@ -138,21 +158,39 @@ def main():
     output_csv = os.path.join(data_dir, 'direct_flights_map.csv')
 
     # Ensure data directory exists
-    os.makedirs(data_dir, exist_ok=True)
+    try:
+        os.makedirs(data_dir, exist_ok=True)
+    except Exception as e:
+        print(f"Error creating data directory: {e}")
+        sys.exit(1)
 
     # Read airport codes
-    airports = read_airports_csv(airports_csv)
+    print("Reading airport codes...")
+    try:
+        airports = read_airports_csv(airports_csv)
+        print(f"Found {len(airports)} airports.")
+    except Exception as e:
+        print(f"Error in read_airports_csv: {e}")
+        sys.exit(1)
 
     # Check for direct flights
-    direct_flights_map = check_direct_flights(
-        airports,
-        sample_size=args.sample_size,
-        delay=args.delay
-    )
+    try:
+        direct_flights_map = check_direct_flights(
+            airports,
+            sample_size=args.sample_size,
+            delay=args.delay
+        )
+    except Exception as e:
+        print(f"Error in check_direct_flights: {e}")
+        sys.exit(1)
 
     # Save the results
-    save_to_csv(direct_flights_map, output_csv)
-    print(f"Direct flights map saved to {output_csv}")
+    try:
+        save_to_csv(direct_flights_map, output_csv)
+        print(f"Direct flights map saved to {output_csv}")
+    except Exception as e:
+        print(f"Error saving to CSV: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
