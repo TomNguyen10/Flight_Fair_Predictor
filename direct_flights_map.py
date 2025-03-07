@@ -1,6 +1,7 @@
 import csv
 import os
 import time
+import argparse
 from collections import defaultdict
 from typing import Dict, List, Set
 from datetime import datetime, timedelta
@@ -116,25 +117,40 @@ def save_to_csv(direct_flights_map: Dict[str, List[str]], output_path: str) -> N
             writer.writerow([source, ','.join(destinations)])
 
 
+def parse_args():
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description='Generate a map of direct flights between airports.')
+    parser.add_argument('--sample-size', type=int,
+                        help='Limit the number of airports to process (for testing)')
+    parser.add_argument('--delay', type=float, default=1.0,
+                        help='Delay in seconds between API calls (default: 1.0)')
+    return parser.parse_args()
+
+
 def main():
+    # Parse command-line arguments
+    args = parse_args()
+
     # Paths
     data_dir = 'data'
     airports_csv = os.path.join(data_dir, 'airports.csv')
     output_csv = os.path.join(data_dir, 'direct_flights_map.csv')
 
-    # Read airport codes
-    print("Reading airport codes...")
-    airports = read_airports_csv(airports_csv)
-    print(f"Found {len(airports)} airports.")
+    # Ensure data directory exists
+    os.makedirs(data_dir, exist_ok=True)
 
-    # Check for direct flights (using a small sample for testing)
-    print("Checking for direct flights over a week-long period...")
-    # For testing, use a small sample size (e.g., 10)
-    # For production, remove the sample_size parameter or set it to None
-    direct_flights_map = check_direct_flights(airports, sample_size=10)
+    # Read airport codes
+    airports = read_airports_csv(airports_csv)
+
+    # Check for direct flights
+    direct_flights_map = check_direct_flights(
+        airports,
+        sample_size=args.sample_size,
+        delay=args.delay
+    )
 
     # Save the results
-    print("Saving results...")
     save_to_csv(direct_flights_map, output_csv)
     print(f"Direct flights map saved to {output_csv}")
 
