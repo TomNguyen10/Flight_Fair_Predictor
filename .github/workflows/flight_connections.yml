@@ -1,9 +1,6 @@
 name: Generate Flight Connection Graphs
 
 on:
-  # Run on schedule (once per day at midnight UTC)
-  schedule:
-    - cron: "0 0 * * *"
   # Allow manual triggering
   workflow_dispatch:
   # Run on push to main branch (optional)
