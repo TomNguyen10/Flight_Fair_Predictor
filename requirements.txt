@@ -8,3 +8,12 @@ pytz==2025.1
 selectolax==0.3.28
 six==1.17.0
 tzdata==2025.1
+os == 0.1.4
+csv == 1.0
+time == 0.1.0
+json == 2.0.9
+threading
+queue
+concurrent
+collections
+datetime
