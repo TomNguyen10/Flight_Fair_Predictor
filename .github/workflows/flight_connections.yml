@@ -42,7 +42,7 @@ jobs:
           fi
 
       - name: Archive results
-        uses: actions/upload-artifact@v3.1.0 # Updated to the latest version
+        uses: actions/upload-artifact@v3 # Use the latest stable version
         with:
           name: flight-connections
           path: |
