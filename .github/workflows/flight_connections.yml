@@ -1,52 +1,73 @@
-name: Flight Connections Graph Generator
+name: Generate Flight Connection Graphs
 
 on:
+  # Run on schedule (once per day at midnight UTC)
+  schedule:
+    - cron: "0 0 * * *"
+  # Allow manual triggering
+  workflow_dispatch:
+  # Run on push to main branch (optional)
   push:
     branches:
-      - main # Change this to your default branch if it's different
+      - main
+    paths:
+      - "fast_flights.py"
+      - "multi_thread_flights.py"
+      - "sorted_airports.csv"
 
 jobs:
-  generate-flight-connections:
+  generate_connections:
     runs-on: ubuntu-latest
-    timeout-minutes: 360 # 6 hours max runtime
+    timeout-minutes: 120 # Set a reasonable timeout
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
+          cache: "pip"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas fast-flights
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pandas
+          # Install any other requirements for fast_flights module
+          # If you have a requirements.txt file:
+          # pip install -r requirements.txt
 
-      - name: Run flight connections generator
+      - name: Run flight connection generator
         run: |
-          cd data
-          python flight_graph_threaded.py
+          python multi_thread_flights.py
+        env:
+          MAX_WORKERS: 4
+          MAX_REQUESTS_PER_MINUTE: 60
 
-      - name: Check results
+      - name: Check for errors
         run: |
-          if [ -f data/flight_connections_all.csv ]; then
-            echo "Flight connections generated successfully"
-            echo "Total connections: $(wc -l < data/flight_connections_all.csv)"
-          else
-            echo "Failed to generate flight connections"
-            cat data/flight_connections_error.log
+          if [ -f "flight_connections_error.log" ]; then
+            echo "Error detected during execution:"
+            cat flight_connections_error.log
             exit 1
           fi
 
-      - name: Archive results
-        uses: actions/upload-artifact@v3 # Use the latest stable version
+      - name: Upload connection data
+        uses: actions/upload-artifact@v4
         with:
           name: flight-connections
           path: |
-            data/flight_connections_*.csv
-            data/flight_connections_*.json
-            data/flight_connections_summary.json
-          retention-days: 30
+            flight_connections_*.json
+            flight_connections_*.csv
+            flight_connections_summary.json
+          retention-days: 7
+
+      - name: Commit results to repository (optional)
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "github-actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add flight_connections_*.json flight_connections_all.csv flight_connections_summary.json
+          git commit -m "Update flight connections data [skip ci]" || echo "No changes to commit"
+          git push
