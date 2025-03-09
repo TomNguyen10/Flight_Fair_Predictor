@@ -1,13 +1,13 @@
 name: Generate Flight Connection Graphs
 
 on:
-  # Run only when this workflow file is added/modified
+  # Run when specific files are changed
   push:
     paths:
       - ".github/workflows/generate-flight-connections.yml"
-
-  # Allow manual triggering
-  workflow_dispatch:
+      - "multi_thread_flights.py"
+      - "fast_flights.py"
+      - "sorted_airports.csv"
 
 jobs:
   generate_connections:
