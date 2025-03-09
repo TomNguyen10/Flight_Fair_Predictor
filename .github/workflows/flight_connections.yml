@@ -1,16 +1,13 @@
 name: Generate Flight Connection Graphs
 
 on:
+  # Run only when this workflow file is added/modified
+  push:
+    paths:
+      - ".github/workflows/generate-flight-connections.yml"
+
   # Allow manual triggering
   workflow_dispatch:
-  # Run on push to main branch (optional)
-  push:
-    branches:
-      - main
-    paths:
-      - "fast_flights.py"
-      - "multi_thread_flights.py"
-      - "sorted_airports.csv"
 
 jobs:
   generate_connections:
@@ -38,9 +35,6 @@ jobs:
       - name: Run flight connection generator
         run: |
           python multi_thread_flights.py
-        env:
-          MAX_WORKERS: 4
-          MAX_REQUESTS_PER_MINUTE: 60
 
       - name: Check for errors
         run: |
@@ -60,11 +54,10 @@ jobs:
             flight_connections_summary.json
           retention-days: 7
 
-      - name: Commit results to repository (optional)
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+      - name: Commit results to repository
         run: |
           git config --local user.email "github-actions@github.com"
           git config --local user.name "GitHub Actions"
           git add flight_connections_*.json flight_connections_all.csv flight_connections_summary.json
-          git commit -m "Update flight connections data [skip ci]" || echo "No changes to commit"
+          git commit -m "Add flight connections data [skip ci]" || echo "No changes to commit"
           git push
