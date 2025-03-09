@@ -37,7 +37,7 @@ results_lock = threading.Lock()
 #####################################################################
 
 
-def load_airports_data(file_path='sorted_airports.csv'):
+def load_airports_data(file_path='airports.csv'):
     """Load the sorted airports data from CSV file."""
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -491,7 +491,6 @@ def main():
     """Main function to orchestrate the multi-threaded processing."""
     # Load data
     airports_df = load_airports_data()
-
     # Get international airports
     int_airports_df = get_international_airports(airports_df)
 

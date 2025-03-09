@@ -30,7 +30,7 @@ jobs:
 
       - name: Run flight connection generator
         run: |
-          python flight_graph_threaded.py
+          python data/flight_graph_threaded.py
 
       - name: Check for errors
         run: |
