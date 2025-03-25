@@ -1,0 +1,67 @@
+name: Validate International Routes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/international_connections.csv"
+      - "validate_routes.py"
+      - ".github/workflows/validate_routes.yml"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  validate-routes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy fast-flights
+
+      - name: Create data directory
+        run: mkdir -p data
+
+      - name: Run route validation
+        run: python validate_routes.py
+
+      - name: Upload validation results
+        uses: actions/upload-artifact@v3
+        with:
+          name: route-validation-results
+          path: data/route_validation_*.json
+
+      - name: Create summary comment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = JSON.parse(fs.readFileSync('data/route_validation_summary.json', 'utf8'));
+
+            const comment = `## Route Validation Results
+
+            ### Summary
+            - Total Routes Checked: ${summary.total_routes}
+            - Valid Routes: ${summary.valid_routes}
+            - Invalid Routes: ${summary.invalid_routes}
+            - Validation Dates: ${summary.validation_dates.join(', ')}
+            - Validation Time: ${new Date(summary.timestamp).toLocaleString()}
+
+            ### Details
+            Full validation results are available in the artifacts.`;
+
+            // Create a new issue with the results
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Route Validation Results - ${new Date().toLocaleDateString()}`,
+              body: comment,
+              labels: ['route-validation']
+            });
