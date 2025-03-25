@@ -2,14 +2,12 @@ name: Validate International Routes
 
 on:
   push:
-    branches:
-      - main # or your default branch name
-      - develop # if you have a development branch
-  pull_request:
-    branches:
-      - main
-      - develop
-  workflow_dispatch: # Keep manual trigger option
+    branches: [main]
+    paths:
+      - "data/international_connections.csv"
+      - "validate_routes.py"
+      - ".github/workflows/validate_routes.yml"
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
   validate-routes:
@@ -41,7 +39,6 @@ jobs:
           path: data/route_validation_*.json
 
       - name: Create summary comment
-        if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
         with:
           script: |
@@ -54,38 +51,17 @@ jobs:
             - Total Routes Checked: ${summary.total_routes}
             - Valid Routes: ${summary.valid_routes}
             - Invalid Routes: ${summary.invalid_routes}
+            - Validation Dates: ${summary.validation_dates.join(', ')}
             - Validation Time: ${new Date(summary.timestamp).toLocaleString()}
-
-            ### Validation Dates
-            ${summary.validation_dates.map(date => `- ${date}`).join('\n')}
 
             ### Details
             Full validation results are available in the artifacts.`;
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            // Create a new issue with the results
+            github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: comment
-            });
-
-      - name: Create commit status
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs');
-            const summary = JSON.parse(fs.readFileSync('data/route_validation_summary.json', 'utf8'));
-
-            const success = summary.valid_routes > 0;
-            const status = success ? 'success' : 'failure';
-            const description = `${summary.valid_routes} valid routes found out of ${summary.total_routes}`;
-
-            github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.sha,
-              state: status,
-              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-              description: description,
-              context: 'Route Validation'
+              title: `Route Validation Results - ${new Date().toLocaleDateString()}`,
+              body: comment,
+              labels: ['route-validation']
             });
