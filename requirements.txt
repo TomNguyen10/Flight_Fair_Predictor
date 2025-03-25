@@ -1,4 +1,4 @@
-fast-flights==1.0.0
+fast-flights==2.1
 numpy==2.2.3
 pandas>=2.2.0
 primp==0.14.0
